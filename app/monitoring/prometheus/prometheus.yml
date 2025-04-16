@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 30s  # 每 30 秒抓取數據
+  evaluation_interval: 30s  # 每 30 秒評估警報規則
+
+# ✅ 配置 Alertmanager (警報發送到 Alertmanager)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["crypto_proj_alertmanager_container:9093"]
+
+# ✅ 載入 Alert 規則檔案 (可以事後加)
+rule_files:
+  - "/etc/prometheus/alert_rules.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['crypto_proj_pushgateway_container:9091']
+  
+  - job_name: 's3_exporter'
+    static_configs:
+      - targets: ['crypto_proj_s3_exporter_container:8000']

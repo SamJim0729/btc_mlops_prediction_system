@@ -1,0 +1,139 @@
+# docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env up -d
+# docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env down
+# docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env stop
+# docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env start
+# docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env build flask_main
+services:
+  flask_main:
+    build:
+      context: ..
+      dockerfile: docker-compose/Dockerfile
+    container_name: crypto_proj_flask_main_container
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      MINIO_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY_ID}
+      MINIO_SECRET_ACCESS_KEY: ${MINIO_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      SQL_HOST: ${SQL_HOST}
+      SQL_USER: ${SQL_USER}
+      SQL_PASSWORD: ${SQL_PASSWORD}
+      SQL_DB: ${SQL_DB}
+      # MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # MYSQL_DATABASE: ${MYSQL_DATABASE}
+      # MYSQL_USER: ${MYSQL_USER}
+      # MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      # MYSQL_PORT: ${MYSQL_PORT}
+
+    ports:
+      - "8081:8081"
+    networks:
+      - mlops_network
+
+  mysql:
+    image: mysql:8
+    container_name: crypto_proj_mysql_container
+    restart: always
+    ports:
+      - "${MYSQL_PORT}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - crypto_proj_mysql_data:/var/lib/mysql
+    networks:
+      - mlops_network
+
+  minio:
+    image: minio/minio
+    container_name: crypto_proj_minio_container
+    restart: always
+    ports:
+      - "${MINIO_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - crypto_proj_minio_data:/data
+    networks:
+      - mlops_network
+
+  pushgateway:
+    image: prom/pushgateway
+    container_name: crypto_proj_pushgateway_container
+    restart: always
+    ports:
+      - "${PUSHGATEWAY_PORT}:9091"
+    networks:
+      - mlops_network
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: crypto_proj_prometheus_container
+    restart: always
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    volumes:
+      - ../app/monitoring/prometheus:/etc/prometheus
+      - crypto_proj_prometheus_data:/prometheus
+    networks:
+      - mlops_network
+    # command: --config.file=/etc/prometheus/prometheus.yml
+      # - /workspaces/8_btc_prediction/monitoring/prometheus/:/etc/prometheus
+      # - /workspaces/8_btc_prediction/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+
+  alertmanager:
+    image: prom/alertmanager
+    container_name: crypto_proj_alertmanager_container
+    restart: always
+    ports:
+      - "${ALERTMANAGER_PORT}:9093"
+    volumes:
+      - ../app/monitoring/alertmanager:/etc/alertmanager
+    networks:
+      - mlops_network
+      # - ../monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+
+  mlflow:
+    image: python:3.10
+    container_name: crypto_proj_mlflow_container
+    restart: always
+    working_dir: /app
+    command: >
+      bash -c "pip install mlflow pymysql cryptography && mlflow server --backend-store-uri ${MLFLOW_BACKEND_URI} --default-artifact-root ${MLFLOW_ARTIFACT_URI} --host 0.0.0.0 --port ${MLFLOW_PORT}"
+    ports:
+      - "${MLFLOW_PORT}:${MLFLOW_PORT}"
+    networks:
+      - mlops_network
+  
+# 如果 Docker Compose 幫你自動加了前綴：
+# crypto_proj_mysql_data → 會變成 docker-compose_crypto_proj_mysql_data
+# 導致 無法對應你原本搬資料過去的 volume
+# 所以必須加上 name:，讓 Compose 指定 exact name。
+
+volumes:
+  crypto_proj_mysql_data:
+    name: crypto_proj_mysql_data
+    external: true
+  crypto_proj_minio_data:
+    name: crypto_proj_minio_data
+    external: true
+  crypto_proj_prometheus_data:
+    name: crypto_proj_prometheus_data
+    external: true
+  
+
+networks:
+  mlops_network:
+    external: true
+
+

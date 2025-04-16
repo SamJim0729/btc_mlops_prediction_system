@@ -1,0 +1,24 @@
+global:
+  resolve_timeout: 5m  # 告警解除後，等待 5 分鐘再標記為已解決
+
+route:
+  group_by: ['alertname']
+  group_wait: 30s #在 AlertManager 發現新告警時，會先等待 10 秒，再將所有符合 group_by 的告警一起發送
+  group_interval: 3m #在相同 group_by 規則下，如果有新的告警出現，AlertManager 會每隔 5 分鐘 重新發送一次告警
+  repeat_interval: 20d #AlertManager 會在 相同告警未解決時，每隔 3 小時 重複發送一次通知
+  receiver: 'slack_receiver'
+
+receivers:
+  - name: 'slack_receiver'  # 👈 改名對應上方 receiver 名稱
+    slack_configs:
+      - channel: '#sam-side-projects'  # 👈 Slack 頻道名稱
+        send_resolved: true
+        username: 'MLOpsBot'
+        icon_emoji: ':robot_face:'
+        api_url: 'https://hooks.slack.com/services/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'  # 👈 填你的完整 Webhook URL
+        title: '{{ .CommonAnnotations.summary }}'
+        text: |
+          * 狀態：* `{{ .Status }}`
+          * 任務名稱：* `{{ index .CommonLabels "job" }}`
+          * 告警名稱：* `{{ index .CommonLabels "alertname" }}`
+          * 詳細描述：* {{ .CommonAnnotations.description }}

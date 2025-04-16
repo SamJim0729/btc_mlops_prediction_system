@@ -1,0 +1,6 @@
+boto3 
+prometheus_client 
+pandas 
+requests 
+pytz
+python-dotenv

@@ -1,0 +1,59 @@
+  #警報會分幾種不同的group(modelresult指標比較，AB模型比較)、data_drift、btc當前超過前月最高、最低價(去年、前月)?
+
+  groups:
+    - name: crypto_proj_alerts
+      interval: 1m # 每 1 分鐘執行一次所有的 rules
+      rules:
+      
+      # 1️⃣ 監控前 5 大重要變數的 KS 平均是否漂移
+      - alert: FeatureDriftAlert # < alert name
+        # 因為要把ml_feature_drift_score >>> top 5 變數ks分數一起平均所以才需要avg_over_time
+        expr: |
+          avg_over_time(ml_feature_drift_score{metric_type="ks"}[1h]) > 0.3 
+          and 
+          (time() - timestamp(ml_feature_drift_score{metric_type="ks"}) < 60*60*24*30)  # 🟡 僅針對近 30 天內數據
+        for: 1m # 持續 1 分鐘 `True` 才會觸發 Alert
+        labels:
+          severity: warning
+        annotations:
+          summary: "⚠️ Feature Drift Alert!"
+          description: "The KS Score of feature {{ $labels.feature_name }} exceeded 0.3. Current Value: {{ printf \"%.2f\" $value }}"
+          
+      # 2️⃣ 監控 R2 Score (模型表現低於標準)
+      - alert: LowR2Score
+        expr: |
+          ml_model_r2 < 0.5 
+          and 
+          (time() - timestamp(ml_model_r2) < 60*60*24*30)
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "⚠️ Low R2 Score Detected"
+          description: "The R2 Score of the current model is below 0.6. Current Value: {{ printf \"%.2f\" $value }}"
+
+      # 3️⃣ 監控 SMAPE 超過 20%
+      - alert: HighSMAPEAlert
+        expr: |
+          ml_model_mape > 0.3 
+          and 
+          (time() - timestamp(ml_model_mape) < 60*60*24*30)
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "⚠️ High SMAPE Detected"
+          description: "The SMAPE is above 20%. Current Value: {{ printf \"%.2f\" $value }}"
+
+      # 4️⃣ 監控 RMSE 高於 1.5x 平均值
+      - alert: HighRMSEAlert
+        expr: |
+          ml_model_rmse > 0.1 
+          and 
+          (time() - timestamp(ml_model_rmse) < 60*60*24*30)
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "⚠️ High RMSE Detected"
+          description: "The RMSE is 1.5x the historical average over the past 30 days. Current Value: {{ printf \"%.2f\" $value }}"

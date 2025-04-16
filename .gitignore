@@ -1,0 +1,42 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.vscode/
+*.code-workspace
+
+.devcontainer/
+
+# Docker
+*.log
+*.pid
+*.sock
+docker-compose/*.log
+docker-compose/*.pid
+
+# # dotenv files (包含敏感資訊)
+.env
+.env.*
+
+# AWS Lambda zip bundles
+aws_scheduler/lambda_package/
+
+# 忽略所有 CSV（可能包含機密數據）
+*.csv
+
+# Evidently HTML reports
+app/evidently_drift_report.html
+evidently_drift_report.html
+
+# Model artifacts or temp data
+**/mlruns/
+**/model_outputs/
+**/selected_features_*.json
+
+# 忽略 log 檔案
+logs/
+*.log
+
+# 忽略專案內不需要上傳的資料夾
+temp/
