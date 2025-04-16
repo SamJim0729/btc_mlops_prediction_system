@@ -17,7 +17,6 @@ docker-compose/*.pid
 
 # # dotenv files (包含敏感資訊)
 .env
-.env.*
 
 # AWS Lambda zip bundles
 aws_scheduler/lambda_package/

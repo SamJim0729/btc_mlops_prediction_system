@@ -5,7 +5,7 @@
 採用 Docker Compose 管理多容器服務，結合 MLflow、Prometheus、Grafana 等工具，並以 Airflow 定期排程驅動全流程任務，打造高可維護性、易擴展的自動化金融分析平台。
 
 
-# 專案架構
+## 專案架構
 
 ```bash
 .
@@ -76,7 +76,7 @@
 ```
 
 
-# 功能模組
+## 功能模組
 
 | 功能模組         | 對應容器 / 技術               | 說明 |
 |------------------|-------------------------------|------|
@@ -91,45 +91,50 @@
 | **Grafana**           | `crypto_proj_grafana_container`        | 視覺化儀表板，從 Prometheus、MySql 擷取顯示模型訓練結果與 BTC 相關數據 |
 
 
-#VVV#####################################################################################
+## 啟動專案
 
-## 🔧 啟動專案
-
-### 1️⃣ 複製專案並建立環境變數
+### 1.複製專案並建立環境變數
 
 ```bash
-git clone https://github.com/yourname/btc-mlops.git
-cd btc-mlops
+git clone https://github.com/SamJim0729/btc_mlops_prediction_system.git
+cd btc_mlops_prediction_system
 cp .env.example .env
-# 請依照說明填入 MinIO、MySQL 等連線資訊
+# 請填入 AWS、MinIO、MySQL 等連線資訊
 ```
 
-### 2️⃣ 啟動所有容器
+### 2️.啟動mlops容器、dashboard容器
 
 ```bash
 docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env up -d
+docker compose -f docker-compose/dashboard.yml -p crypto_proj --env-file .env up -d
 ```
 
 
-## ⚙️ 核心環境變數
+## API 一覽
+本系統透過 Flask 提供三個 API 端點，僅 run_feature_selection 開放手動觸發，其餘皆由 Airflow 定期排程執行（此 repo 未納入 DAG 配置檔）。
 
-| 變數 | 說明 |
-|------|------|
-| `MLFLOW_BACKEND_URI` | MLflow 使用的 MySQL 資料庫 |
-| `MLFLOW_ARTIFACT_URI` | Artifact 儲存位置 (e.g. `s3://mlflow-artifacts`) |
-| `MLFLOW_S3_ENDPOINT_URL` | MinIO 的 endpoint，自動透過 docker inspect 寫入 `.env.runtime` |
-| `MYSQL_*`、`MINIO_*` | 相關連線設定 |
+### 手動觸發（開發者可用於重訓模型）
 
-#^^^#####################################################################################
+| Method | Endpoint               | 說明 |
+|--------|------------------------|------|
+| POST   | /run_feature_selection | 執行特徵選擇流程，僅當模型效能下降或發生資料漂移時建議重新執行。會重新選變數並產出 JSON 特徵設定檔。 |
 
+```bash
+curl -X POST http://localhost:8081/run_feature_selection
+```
 
-## 📡 API 一覽
+### 自動執行（由 Airflow 定期排程）
+下列 API 為系統內部使用，每月自動由 Airflow 呼叫，無需手動操作。可用於測試目的。
 
-- `POST /run_data_update`：更新資料來源，寫入 MySQL
-- `POST /run_model_training`：訓練模型並將結果送入 MLflow + 推送指標到 Prometheus
-#VVV#####################################################################################
-- `POST /`：
-#^^^#####################################################################################
+| Method | Endpoint             | 說明 |
+|--------|----------------------|------|
+| POST   | /run_data_update     | 擷取最新 BTC / 總經資料，寫入 MySQL。資料涵蓋現貨、期貨、技術指標與全球經濟數據等。 |
+| POST   | /run_model_training  | 根據最新特徵設定檔訓練回歸模型，訓練結果送入 MLflow 並推送指標至 Prometheus。 |
+
+```bash
+curl -X POST http://localhost:8081/run_data_update
+curl -X POST http://localhost:8081/run_model_training
+```
 
 
 ## 監控與可視化
@@ -138,9 +143,9 @@ docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env up -d
 - Prometheus 每月抓取最新訓練指標
 - Alertmanager 超過門檻自動通知 (此專案整合 Slack 通知)
 
-# 測試與部署建議
+
+## 測試與部署建議
 
 - **Airflow**：已規劃為 DAG 排程自動化資料更新與模型訓練
-- **DevContainer**：整合 VS Code Dev Container，便於協作開發
 
 

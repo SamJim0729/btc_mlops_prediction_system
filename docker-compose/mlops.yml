@@ -2,7 +2,7 @@
 # docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env down
 # docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env stop
 # docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env start
-# docker compose -f docker-compose/mlops.yml -p crypto_proj --env-file .env build flask_main
+
 services:
   flask_main:
     build:
